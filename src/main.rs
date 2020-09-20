@@ -25,9 +25,7 @@ fn main() -> io::Result<()> {
     let args: Vec<_> = env::args().collect();
 
     if args.len() > 1 {
-        for arg in &args[1..] {
-            print_tux(arg);
-        }
+        print_tux(&args[1..].join("\n"));
     } else {
         let mut string = String::new();
 
