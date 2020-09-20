@@ -1,4 +1,4 @@
-use std::cmp::{max, min};
+use std::cmp::min;
 use std::env;
 use std::io;
 use std::io::prelude::*;
@@ -38,81 +38,75 @@ fn main() -> io::Result<()> {
 }
 
 fn print_tux(text: &str) {
-    let mut word_len_max = 0;
-    let mut line_len_max = 0;
-
-    for word in text.split_whitespace() {
-        if word_len_max < word.len() {
-            word_len_max = word.len();
-        }
-    }
-
-    for line in text.lines() {
-        if line_len_max < line.len() {
-            line_len_max = line.len();
-        }
-    }
-
-    let text_len = if line_len_max > THRESH_LEN {
-        min(word_len_max, THRESH_LEN)
-    } else {
-        line_len_max
-    };
-    // word_len_max = min(word_len_max, THRESH_LEN);
-    // line_len_max = min(line_len_max, THRESH_LEN);
-
-    // let text_len = max(word_len_max, line_len_max);
-
-    let len = text_len + 2;
-    let half_len = len / 2;
-    println!("   {}", "_".repeat(len));
-    println!("  /{}\\", " ".repeat(len));
+    let mut lines = Vec::with_capacity(text.len() / THRESH_LEN + 1);
+    // let mut lines = vec![String::with_capacity(THRESH_LEN); text.len() / THRESH_LEN + 1];
+    let mut index = 0;
 
     for line in text.lines() {
         let mut i = 0;
-        print!(" |  ");
+        lines.push(String::with_capacity(THRESH_LEN));
 
         for word in line.split_whitespace() {
-            if i + word.len() <= text_len {
-                print!("{}", word);
+            if i + word.len() <= THRESH_LEN {
+                lines[index].push_str(word);
 
                 i += word.len();
-                if i < text_len {
-                    print!(" ");
+                if i < THRESH_LEN {
+                    lines[index].push_str(" ");
                     i += 1;
                 }
-            } else if word.len() > text_len {
+            } else if word.len() > THRESH_LEN {
                 let mut j = 0;
                 loop {
-                    let end = j + min(word.len() - j, text_len) - i;
+                    let end = j + min(word.len() - j, THRESH_LEN) - i;
 
                     if end >= word.len() {
-                        print!("{}", &word[j..]);
+                        lines[index].push_str(&word[j..]);
                         i = end - j;
-                        if i < text_len {
-                            print!(" ");
-                            // adding 1 for the space
+                        if i < THRESH_LEN {
+                            lines[index].push_str(" ");
                             i += 1;
                         }
                         break;
                     } else {
-                        print!("{}  |\n |  ", &word[j..end]);
+                        lines[index].push_str(&word[j..end]);
+                        lines.push(String::with_capacity(THRESH_LEN));
+                        index += 1;
                         j = end;
                         i = 0;
                     }
                 }
             } else {
-                print!("{}  |\n |  {}", " ".repeat(text_len - i), word);
+                lines.push(String::with_capacity(THRESH_LEN));
+                index += 1;
+                lines[index].push_str(word);
 
                 i = word.len();
-                if i < text_len {
-                    print!(" ");
+                if i < THRESH_LEN {
+                    lines[index].push_str(" ");
                     i += 1;
                 }
             }
         }
 
-        println!("{}  |", " ".repeat(text_len - i));
+        index += 1;
+    }
+
+    let mut len = 0;
+    for line in lines.iter() {
+        if line.len() > len {
+            len = line.len();
+        }
+    }
+
+    len += 2;
+    let half_len = len / 2;
+
+    println!("   {}", "_".repeat(len));
+    println!("  /{}\\", " ".repeat(len));
+
+    for line in lines {
+        println!(" |  {}{}  |", line, " ".repeat(len - line.len() - 2));
     }
 
     println!(
