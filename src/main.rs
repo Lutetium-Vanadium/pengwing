@@ -3,7 +3,7 @@ use std::env;
 use std::io;
 use std::io::prelude::*;
 
-const TUX: [&'static str; 13] = [
+const TUX: [&str; 13] = [
     r"  \\",
     r"   \\   _____",
     r"    ` /       \",
@@ -37,83 +37,81 @@ fn main() -> io::Result<()> {
 
 fn print_tux(text: &str) {
     let mut lines = Vec::with_capacity(text.len() / THRESH_LEN + 1);
-    // let mut lines = vec![String::with_capacity(THRESH_LEN); text.len() / THRESH_LEN + 1];
-    let mut index = 0;
 
-    for line in text.lines() {
-        let mut i = 0;
-        lines.push(String::with_capacity(THRESH_LEN));
+    for text_line in text.lines() {
+        let mut line = String::with_capacity(THRESH_LEN);
+        let mut line_len = 0;
 
-        for word in line.split_whitespace() {
-            if i + word.len() <= THRESH_LEN {
-                lines[index].push_str(word);
+        for word in text_line.split_whitespace() {
+            let word_len = word.chars().count();
 
-                i += word.len();
-                if i < THRESH_LEN {
-                    lines[index].push_str(" ");
-                    i += 1;
+            if line_len + word_len <= THRESH_LEN {
+                line.push_str(word);
+                line_len += word_len;
+
+                if line_len < THRESH_LEN {
+                    line.push(' ');
+                    line_len += 1;
                 }
-            } else if word.len() > THRESH_LEN {
+            } else if word_len > THRESH_LEN {
+                // very long word, split into multiple lines
                 let mut j = 0;
-                loop {
-                    let end = j + min(word.len() - j, THRESH_LEN) - i;
 
-                    if end >= word.len() {
-                        lines[index].push_str(&word[j..]);
-                        i = end - j;
-                        if i < THRESH_LEN {
-                            lines[index].push_str(" ");
-                            i += 1;
+                loop {
+                    let end = j + min(word_len - j, THRESH_LEN) - line_len;
+
+                    if end >= word_len {
+                        line.push_str(&word[j..]);
+                        line_len = end - j;
+
+                        if line_len < THRESH_LEN {
+                            line.push(' ');
+                            line_len += 1;
                         }
                         break;
                     } else {
-                        lines[index].push_str(&word[j..end]);
-                        lines.push(String::with_capacity(THRESH_LEN));
-                        index += 1;
+                        line.push_str(&word[j..end]);
+                        line_len = end - j;
+                        lines.push((line, line_len));
+
+                        line = String::with_capacity(THRESH_LEN);
                         j = end;
-                        i = 0;
+                        line_len = 0;
                     }
                 }
             } else {
-                lines.push(String::with_capacity(THRESH_LEN));
-                index += 1;
-                lines[index].push_str(word);
+                lines.push((line, line_len));
+                line = String::with_capacity(THRESH_LEN);
+                line.push_str(word);
+                line_len = word_len;
 
-                i = word.len();
-                if i < THRESH_LEN {
-                    lines[index].push_str(" ");
-                    i += 1;
+                if line_len < THRESH_LEN {
+                    line.push(' ');
+                    line_len += 1;
                 }
             }
         }
 
-        index += 1;
-    }
-
-    let mut len = 0;
-    for line in lines.iter() {
-        if line.len() > len {
-            len = line.len();
+        while line.ends_with(' ') {
+            line.pop();
+            line_len -= 1;
         }
+
+        lines.push((line, line_len));
     }
 
-    len += 2;
-    let half_len = len / 2;
+    let max_len = lines.iter().map(|&(_, len)| len).max().unwrap_or(0);
 
-    println!("   {}", "_".repeat(len));
-    println!("  /{}\\", " ".repeat(len));
+    println!("   {:_>len$}", "", len = max_len + 2);
+    println!("  /{:>len$}\\", "", len = max_len + 2);
 
-    for line in lines {
-        println!(" |  {}{}  |", line, " ".repeat(len - line.len() - 2));
+    for (line, _) in lines {
+        println!(" |  {:len$}  |", line, len = max_len);
     }
 
-    println!(
-        "  \\{} {}/",
-        "_".repeat(half_len),
-        "_".repeat(len - half_len - 1)
-    );
+    println!("  \\{:_^len$}/", ' ', len = max_len + 2);
 
     for line in &TUX {
-        println!("{} {}", " ".repeat(half_len), line);
+        println!("{:len$} {}", "", line, len = (max_len + 1) / 2);
     }
 }
